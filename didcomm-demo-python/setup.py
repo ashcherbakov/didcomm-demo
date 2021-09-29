@@ -35,7 +35,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'didcomm-cli = didcomm_demo/didcomm_cli:cli',
+            'didcomm-cli = didcomm_demo.didcomm_cli:cli',
         ],
     },
 )

@@ -1,4 +1,5 @@
 import click
+from didcomm.pack_encrypted import PackEncryptedConfig
 from peerdid.types import DIDDocVerMaterialFormat
 
 from didcomm_demo.didcomm_demo import DIDCommDemo
@@ -19,11 +20,12 @@ def cli():
 
 @cli.command()
 @click.option('--auth_keys_count', default=1, help='Number of authentication keys')
-@click.option('--agreement_keys_count', default=0, help='Number of agreement keys')
+@click.option('--agreement_keys_count', default=1, help='Number of agreement keys')
 @click.option('--service_endpoint', default=None, help='Optional service endpoint')
 @click.option('--service_routing_keys', default=[], help='Optional service routing keys')
 def create_peer_did(auth_keys_count, agreement_keys_count, service_endpoint, service_routing_keys):
-    did = DIDCommDemo(secrets_resolver).create_peer_did(
+    demo = DIDCommDemo(secrets_resolver)
+    did = demo.create_peer_did(
         auth_keys_count=auth_keys_count,
         agreement_keys_count=agreement_keys_count,
         service_endpoint=service_endpoint,
@@ -44,16 +46,34 @@ def resolve_peer_did(did, format):
 
 
 @cli.command()
-def pack():
-    pass
+@click.argument('msg')
+@click.option('--to', required=True, help="Receiver's DID")
+@click.option('--frm', default=None, help="Sender's DID. Anonymous encryption is used if not set.")
+@click.option('--sign-from', default=None, help="Sender's DID. Anonymous encryption is used if not set.")
+@click.option('--protect-sender-id', default=True,
+              help="Whether the sender's ID (DID) must be hidden. True by default.")
+def pack(msg, to, frm, sign_from, protect_sender_id):
+    demo = DIDCommDemo(secrets_resolver)
+    res = demo.pack(
+        msg=msg,
+        to=to,
+        frm=frm,
+        sign_frm=sign_from,
+        config=PackEncryptedConfig(protect_sender_id=protect_sender_id)
+    )
+    click.echo(f"{res.packed_msg}")
 
 
 @cli.command()
-def unpack():
-    pass
+@click.argument('msg')
+def unpack(msg):
+    demo = DIDCommDemo(secrets_resolver)
+    initial_msg, frm, to, _ = demo.unpack(msg)
+    if frm:
+        click.echo(f"authcrypted {initial_msg} from {frm} to {to}")
+    else:
+        click.echo(f"anoncrypted {initial_msg} to {to}")
 
-# if __name__ == '__main__':
-#     #cli()
-#     private_key_jwk_dict, public_key_jwk_dict = generate_ed25519_key()
-#     inception_key = jwk_x25519_to_peer_did_auth_key(public_key_jwk_dict)
-#     did = peer_did.create_peer_did_numalgo_0(inception_key)
+
+if __name__ == '__main__':
+    cli()

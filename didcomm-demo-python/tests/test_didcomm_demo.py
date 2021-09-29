@@ -34,17 +34,8 @@ def check_expected_did_doc(did, auth_keys_count, agreement_keys_count, service_e
             assert did_doc.get("service")[0]["routingKeys"] == service_routing_keys
 
 
-def test_create_peer_did_numalg_0_default(demo):
-    did = demo.create_peer_did()
-    assert is_peer_did(did)
-    assert did.startswith("did:peer:0")
-    assert len(demo.secrets_resolver.get_kids()) == 1
-    assert demo.secrets_resolver.get_kids()[0].startswith(did)
-    check_expected_did_doc(did, auth_keys_count=1, agreement_keys_count=0, service_endpoint=None)
-
-
 def test_create_peer_did_numalg_0_one_auth_key(demo):
-    did = demo.create_peer_did(auth_keys_count=1)
+    did = demo.create_peer_did(auth_keys_count=1, agreement_keys_count=0)
     assert is_peer_did(did)
     assert did.startswith("did:peer:0")
     assert len(demo.secrets_resolver.get_kids()) == 1
@@ -120,7 +111,10 @@ def did_to(demo):
     return demo.create_peer_did(auth_keys_count=2, agreement_keys_count=2)
 
 
-@pytest.mark.parametrize("input_msg", ["hello"])
+MESSAGES = ["hello", "111", '{"aaa": "bbb"}']
+
+
+@pytest.mark.parametrize("input_msg", MESSAGES)
 def test_pack_unpack_authcrypt(input_msg, demo, did_frm, did_to):
     packed_res = demo.pack(
         msg=input_msg,
@@ -128,30 +122,34 @@ def test_pack_unpack_authcrypt(input_msg, demo, did_frm, did_to):
         to=did_to
     )
 
-    unpacked_msg, unpack_res = demo.unpack(packed_res.packed_msg)
+    unpacked_msg, frm, to, unpack_res = demo.unpack(packed_res.packed_msg)
     assert input_msg == unpacked_msg
+    assert frm == did_frm
+    assert to == did_to
     assert unpack_res.metadata.authenticated is True
     assert unpack_res.metadata.encrypted is True
-    assert unpack_res.metadata.anonymous_sender is False
+    assert unpack_res.metadata.anonymous_sender is True
     assert unpack_res.metadata.non_repudiation is False
 
 
-@pytest.mark.parametrize("input_msg", ["hello"])
+@pytest.mark.parametrize("input_msg", MESSAGES)
 def test_pack_anoncrypt(input_msg, demo, did_to):
     packed_res = demo.pack(
         msg=input_msg,
         to=did_to
     )
 
-    unpacked_msg, unpack_res = demo.unpack(packed_res.packed_msg)
+    unpacked_msg, frm, to, unpack_res = demo.unpack(packed_res.packed_msg)
     assert input_msg == unpacked_msg
+    assert frm is None
+    assert to == did_to
     assert unpack_res.metadata.authenticated is False
     assert unpack_res.metadata.encrypted is True
     assert unpack_res.metadata.anonymous_sender is True
     assert unpack_res.metadata.non_repudiation is False
 
 
-@pytest.mark.parametrize("input_msg", ["hello"])
+@pytest.mark.parametrize("input_msg", MESSAGES)
 def test_pack_authcrypt_signed(input_msg, demo, did_frm, did_to):
     packed_res = demo.pack(
         msg=input_msg,
@@ -160,17 +158,19 @@ def test_pack_authcrypt_signed(input_msg, demo, did_frm, did_to):
         sign_frm=did_frm
     )
 
-    unpacked_msg, unpack_res = demo.unpack(packed_res.packed_msg)
+    unpacked_msg, frm, to, unpack_res = demo.unpack(packed_res.packed_msg)
     assert input_msg == unpacked_msg
+    assert frm == did_frm
+    assert to == did_to
     assert unpack_res.metadata.authenticated is True
     assert unpack_res.metadata.encrypted is True
-    assert unpack_res.metadata.anonymous_sender is False
+    assert unpack_res.metadata.anonymous_sender is True
     assert unpack_res.metadata.non_repudiation is True
 
 
-@pytest.mark.parametrize("input_msg", ["hello"])
-def test_pack_authcrypt_protect_sender(input_msg, demo, did_frm, did_to):
-    config = PackEncryptedConfig(protect_sender_id=True)
+@pytest.mark.parametrize("input_msg", MESSAGES)
+def test_pack_authcrypt_not_hidden_sender(input_msg, demo, did_frm, did_to):
+    config = PackEncryptedConfig(protect_sender_id=False)
     packed_res = demo.pack(
         msg=input_msg,
         frm=did_frm,
@@ -178,9 +178,11 @@ def test_pack_authcrypt_protect_sender(input_msg, demo, did_frm, did_to):
         config=config
     )
 
-    unpacked_msg, unpack_res = demo.unpack(packed_res.packed_msg)
+    unpacked_msg, frm, to, unpack_res = demo.unpack(packed_res.packed_msg)
     assert input_msg == unpacked_msg
+    assert frm == did_frm
+    assert to ==did_to
     assert unpack_res.metadata.authenticated is True
     assert unpack_res.metadata.encrypted is True
-    assert unpack_res.metadata.anonymous_sender is True
+    assert unpack_res.metadata.anonymous_sender is False
     assert unpack_res.metadata.non_repudiation is False

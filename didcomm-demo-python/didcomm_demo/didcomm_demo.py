@@ -3,7 +3,7 @@ from typing import Optional, List
 
 from didcomm.common.resolvers import ResolversConfig
 from didcomm.common.types import DID, JSON
-from didcomm.core.utils import id_generator_default
+from didcomm.core.utils import id_generator_default, get_did
 from didcomm.message import Message
 from didcomm.pack_encrypted import pack_encrypted, PackEncryptedResult, PackEncryptedConfig
 from didcomm.unpack import unpack, UnpackResult
@@ -27,7 +27,7 @@ class DIDCommDemo:
 
     def create_peer_did(self,
                         auth_keys_count: int = 1,
-                        agreement_keys_count: int = 0,
+                        agreement_keys_count: int = 1,
                         service_endpoint: Optional[str] = None,
                         service_routing_keys: Optional[List[str]] = None) -> DID:
         return PeerDIDCreator(secrets_resolver=self.secrets_resolver).create_peer_did(
@@ -50,7 +50,7 @@ class DIDCommDemo:
             frm=frm,
             to=[to],
         )
-        config = config or PackEncryptedConfig()
+        config = config or PackEncryptedConfig(protect_sender_id=True)
         config.forward = False  # until it's support in all languages
         return asyncio.get_event_loop().run_until_complete(
             pack_encrypted(
@@ -63,7 +63,7 @@ class DIDCommDemo:
             )
         )
 
-    def unpack(self, packed_msg: str) -> (str, UnpackResult):
+    def unpack(self, packed_msg: str) -> (str, str, UnpackResult):
         res = asyncio.get_event_loop().run_until_complete(
             unpack(
                 resolvers_config=self.resolvers_config,
@@ -71,4 +71,6 @@ class DIDCommDemo:
             )
         )
         msg = res.message.body["msg"]
-        return msg, res
+        frm = get_did(res.metadata.encrypted_from) if res.metadata.encrypted_from else None
+        to = get_did(res.metadata.encrypted_to[0])
+        return msg, frm, to, res

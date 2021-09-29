@@ -5,6 +5,7 @@ from click.testing import CliRunner
 from peerdid.peer_did import is_peer_did
 
 from didcomm_demo.didcomm_cli import set_secrets_resolver, cli
+from didcomm_demo.didcomm_demo import DIDCommDemo
 from didcomm_demo.secrets.secrets_resolver_demo import SecretsResolverDemo
 
 
@@ -16,19 +17,9 @@ def secrets_resolver(tmp_path):
     return secrets_resolver
 
 
-@pytest.mark.parametrize(
-    "auth_keys_count_param",
-    [
-        pytest.param('', id="no-params"),
-        pytest.param('--auth_keys_count=1', id="1-auth-key"),
-    ]
-)
-def test_create_peer_did_numalg_0(secrets_resolver, auth_keys_count_param):
+def test_create_peer_did_numalg_0(secrets_resolver):
     runner = CliRunner()
-    args = ['create-peer-did']
-    if auth_keys_count_param:
-        args.append(auth_keys_count_param)
-    result = runner.invoke(cli, args)
+    result = runner.invoke(cli, ['create-peer-did', '--auth_keys_count=1', '--agreement_keys_count=0'])
     assert result.exit_code == 0
     peer_did = result.output.strip()
     assert is_peer_did(peer_did)
@@ -83,3 +74,48 @@ def test_resolve_peer_did(secrets_resolver):
     did_doc = json.loads(did_doc_json)
     assert "authentication" in did_doc
     assert did_doc["id"] == did
+
+
+MESSAGES = ["hello", "111", '{"aaa": "bbb"}']
+
+
+@pytest.fixture()
+def did_frm(secrets_resolver):
+    return DIDCommDemo(secrets_resolver).create_peer_did()
+
+
+@pytest.fixture()
+def did_to(secrets_resolver):
+    return DIDCommDemo(secrets_resolver).create_peer_did()
+
+
+@pytest.mark.parametrize("input_msg", MESSAGES)
+def test_pack_unpack_authcrypt(input_msg, secrets_resolver, did_frm, did_to):
+    runner = CliRunner()
+    result = runner.invoke(cli, ['pack', input_msg,
+                                 f'--frm={did_frm}',
+                                 f'--to={did_to}'])
+    assert result.exit_code == 0
+    packed_msg = result.output.strip()
+
+    result = runner.invoke(cli, ['unpack', packed_msg])
+    assert result.exit_code == 0
+    res = result.output.strip()
+    assert input_msg in res
+    assert did_frm in res
+    assert did_to in res
+
+
+@pytest.mark.parametrize("input_msg", MESSAGES)
+def test_pack_unpack_anoncrypt(input_msg, secrets_resolver, did_to):
+    runner = CliRunner()
+    result = runner.invoke(cli, ['pack', input_msg,
+                                 f'--to={did_to}'])
+    assert result.exit_code == 0
+    packed_msg = result.output.strip()
+
+    result = runner.invoke(cli, ['unpack', packed_msg])
+    assert result.exit_code == 0
+    res = result.output.strip()
+    assert input_msg in res
+    assert did_to in res
