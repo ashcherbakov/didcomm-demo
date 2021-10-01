@@ -1,2 +1,2 @@
 rootProject.name = 'didcomm-demo'
-include('app')
+include('didcomm-demo-cli')
