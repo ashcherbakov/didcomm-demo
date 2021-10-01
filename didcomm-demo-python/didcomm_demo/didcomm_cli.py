@@ -49,7 +49,7 @@ def resolve_peer_did(did, format):
 @click.argument('msg')
 @click.option('--to', required=True, help="Receiver's DID")
 @click.option('--frm', default=None, help="Sender's DID. Anonymous encryption is used if not set.")
-@click.option('--sign-from', default=None, help="Sender's DID. Anonymous encryption is used if not set.")
+@click.option('--sign-from', default=None, help="Sender's DID for optional signing. The message is not signed if not set.")
 @click.option('--protect-sender-id', default=True,
               help="Whether the sender's ID (DID) must be hidden. True by default.")
 def pack(msg, to, frm, sign_from, protect_sender_id):

@@ -2,7 +2,6 @@ package org.dif.didcomm.demo
 
 import org.dif.DIDComm
 import org.dif.didcomm.demo.core.PeerDIDCreator
-import org.dif.didcomm.demo.core.toJson
 import org.dif.didcomm.demo.diddoc.DIDDocResolverPeerDID
 import org.dif.didcomm.demo.secrets.SecretResolverDemo
 import org.dif.didcomm.demo.secrets.SecretResolverEditable
@@ -19,8 +18,7 @@ class DIDCommDemo(secretsResolver: SecretResolverEditable? = null) {
     data class UnpackResult(val message: String, val from: String?, val to: String, val res: org.dif.model.UnpackResult)
 
     companion object {
-        fun resolvePeerDID(did: String, format: DIDDocVerMaterialFormat) =
-            org.dif.peerdid.resolvePeerDID(did, format)
+        fun resolvePeerDID(did: String, format: DIDDocVerMaterialFormat) = org.dif.peerdid.resolvePeerDID(did, format)
     }
 
 
@@ -37,7 +35,6 @@ class DIDCommDemo(secretsResolver: SecretResolverEditable? = null) {
         serviceEndpoint,
         serviceRoutingKeys
     )
-
 
     fun pack(
         data: String,
@@ -65,7 +62,6 @@ class DIDCommDemo(secretsResolver: SecretResolverEditable? = null) {
     fun unpack(packedMsg: String): UnpackResult {
         val didComm = DIDComm(DIDDocResolverPeerDID(), secretsResolver)
         val res = didComm.unpack(UnpackParams.Builder(packedMsg).build())
-        //val msg = toJson(res.message.body["msg"])
         val msg = res.message.body["msg"].toString()
         val to = res.metadata.encryptedTo?.let { divideDIDFragment(it.first()).first() } ?: ""
         val from = res.metadata.encryptedFrom?.let { divideDIDFragment(it).first() }
