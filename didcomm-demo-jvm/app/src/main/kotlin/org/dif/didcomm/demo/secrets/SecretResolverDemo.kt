@@ -35,6 +35,7 @@ class SecretResolverDemo(private val filePath: String = "secrets.json") : Secret
     }
 
     override fun addSecret(secret: Secret) {
+        // did:peer:2.Ez6LSjsNTqNGe7RZoNATSeY8tCkvvbkzkGmrR54Rb2tBRCess.Ez6LSecetHn9KLDWnu81qW7YJ3zEr23wa8vccNubz4LCU7HqZ.Vz6MkrhZfwgyQ6NsWp5YnnbrDGFnNg5YbNagWvPVtTwkCvs95.Vz6Mkod5yFYVtUCzmZg2JAorQ5apFwjwt5qRZG93xpcihPVdh#6MkrhZfwgyQ6NsWp5YnnbrDGFnNg5YbNagWvPVtTwkCvs95
         secrets.put(secret.kid, secret)
         save()
     }

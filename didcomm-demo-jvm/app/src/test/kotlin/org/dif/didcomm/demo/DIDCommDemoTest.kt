@@ -11,22 +11,28 @@ import org.dif.didcomm.demo.secrets.SecretResolverDemo
 import org.dif.peerdid.core.DIDDocVerMaterialFormat
 import org.dif.peerdid.isPeerDID
 import org.dif.peerdid.resolvePeerDID
+import org.dif.utils.isDID
+import org.junit.Before
 import org.junit.Rule
+import org.junit.jupiter.params.provider.MethodSource
 import org.junit.rules.TemporaryFolder
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 
 class DIDCommDemoTest {
+
 
     @Rule
     @JvmField
     val secretsFolder = TemporaryFolder()
 
-    private fun getDemo(): DIDCommDemo {
+    lateinit var demo: DIDCommDemo
+
+
+    @Before
+    fun setup() {
         val secretsFile = secretsFolder.newFile("secrets.json")
-        return DIDCommDemo(SecretResolverDemo(secretsFile.absolutePath))
+        demo = DIDCommDemo(SecretResolverDemo(secretsFile.absolutePath))
     }
 
     private fun checkExpectedDIDDoc(
@@ -45,7 +51,6 @@ class DIDCommDemoTest {
 
     @Test
     fun testCreatePeerDidDefault() {
-        val demo = getDemo()
         val peerDID = demo.createPeerDID()
         assertTrue(isPeerDID(peerDID))
         assertTrue(peerDID.startsWith("did:peer:2"))
@@ -60,7 +65,6 @@ class DIDCommDemoTest {
 
     @Test
     fun testCreatePeerDidNumalgo0() {
-        val demo = getDemo()
         val peerDID = demo.createPeerDID(authKeysCount = 1, agreementKeysCount = 0)
         assertTrue(isPeerDID(peerDID))
         assertTrue(peerDID.startsWith("did:peer:0"))
@@ -78,12 +82,89 @@ class DIDCommDemoTest {
         val did = "did:peer:0z6MkqRYqQiSgvZQdnBytw86Qbs2ZWUkGv22od935YF4s8M7V"
         val didDocJson = DIDCommDemo.resolvePeerDID(did, format = DIDDocVerMaterialFormat.JWK)
         val didDoc = fromJsonToMap(didDocJson)
-        assertTrue("authentications" in didDoc)
+        assertTrue("authentication" in didDoc)
         assertEquals(did, didDoc["id"])
     }
 
-    @Test
-    fun testPackUnpackAuthcrypt() {
 
+    private fun fromDID() =
+        demo.createPeerDID(authKeysCount = 2, agreementKeysCount = 2)
+
+    private fun toDID() =
+        demo.createPeerDID(authKeysCount = 2, agreementKeysCount = 2)
+
+
+    @Test
+    @MethodSource("messages")
+    fun testPackUnpackAuthcrypt() {
+        val message = "{'aaa': 'bbb'}"
+        val from = fromDID()
+        val to = toDID()
+        val packed = demo.pack(message, from = from, to = to)
+
+        val unpackRes = demo.unpack(packed.packedMessage)
+        assertEquals(message, unpackRes.message)
+        assertEquals(from, unpackRes.from)
+        assertEquals(to, unpackRes.to)
+
+        assertTrue(unpackRes.res.metadata.encrypted)
+        assertTrue(unpackRes.res.metadata.authenticated)
+        assertTrue(unpackRes.res.metadata.anonymousSender)
+        assertFalse(unpackRes.res.metadata.nonRepudiation)
+    }
+
+    @Test
+    @MethodSource("messages")
+    fun testPackUnpackAnoncrypt() {
+        val message = "{'aaa': 'bbb'}"
+        val to = toDID()
+        val packed = demo.pack(message, to = to)
+
+        val unpackRes = demo.unpack(packed.packedMessage)
+        assertEquals(message, unpackRes.message)
+        assertNull(unpackRes.from)
+        assertEquals(to, unpackRes.to)
+
+        assertTrue(unpackRes.res.metadata.encrypted)
+        assertFalse(unpackRes.res.metadata.authenticated)
+        assertTrue(unpackRes.res.metadata.anonymousSender)
+        assertFalse(unpackRes.res.metadata.nonRepudiation)
+    }
+
+    @Test
+    @MethodSource("messages")
+    fun testPackUnpackAuthcryptSigned() {
+        val message = "hello"
+        val from = fromDID()
+        val to = toDID()
+        val packed = demo.pack(message, from = from, to = to, signFrom = from)
+
+        val unpackRes = demo.unpack(packed.packedMessage)
+        assertEquals(message, unpackRes.message)
+        assertEquals(from, unpackRes.from)
+        assertEquals(to, unpackRes.to)
+
+        assertTrue(unpackRes.res.metadata.encrypted)
+        assertTrue(unpackRes.res.metadata.authenticated)
+        assertTrue(unpackRes.res.metadata.anonymousSender)
+        assertTrue(unpackRes.res.metadata.nonRepudiation)
+    }
+
+    @Test
+    fun testPackUnpackAuthcryptSenderNotProtected() {
+        val message = "{'aaa': 'bbb'}"
+        val from = fromDID()
+        val to = toDID()
+        val packed = demo.pack(message, from = from, to = to, protectSender = false)
+
+        val unpackRes = demo.unpack(packed.packedMessage)
+        assertEquals(message, unpackRes.message)
+        assertEquals(from, unpackRes.from)
+        assertEquals(to, unpackRes.to)
+
+        assertTrue(unpackRes.res.metadata.encrypted)
+        assertTrue(unpackRes.res.metadata.authenticated)
+        assertFalse(unpackRes.res.metadata.anonymousSender)
+        assertFalse(unpackRes.res.metadata.nonRepudiation)
     }
 }
