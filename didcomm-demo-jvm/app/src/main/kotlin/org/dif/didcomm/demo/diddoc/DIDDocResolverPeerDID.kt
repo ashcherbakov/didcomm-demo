@@ -1,10 +1,9 @@
 package org.dif.didcomm.demo.diddoc
 
-import com.google.gson.GsonBuilder
 import org.dif.common.VerificationMaterial
 import org.dif.common.VerificationMaterialFormat
 import org.dif.common.VerificationMethodType
-import org.dif.didcomm.demo.core.toJson
+import org.dif.didcomm.demo.core.*
 import org.dif.diddoc.DIDCommService
 import org.dif.diddoc.DIDDoc
 import org.dif.diddoc.DIDDocResolver
@@ -21,21 +20,12 @@ class DIDDocResolverPeerDID : DIDDocResolver {
     override fun resolve(did: String): Optional<DIDDoc> {
         // request DID Doc in JWK format
         val didDocJson = resolvePeerDID(did, format = DIDDocVerMaterialFormat.JWK)
-        val didDoc = GsonBuilder().create().fromJson(didDocJson, Map::class.java)
+        val didDoc = fromJsonToMap(didDocJson)
 
 
-        val authentications = (
-                didDoc.getOrDefault(
-                    "authentication", emptyList<Map<String, Any>>()
-                ) as List<Map<String, Any>>)
-        val keyAgreements = (
-                didDoc.getOrDefault(
-                    "keyAgreement", emptyList<Map<String, Any>>()
-                ) as List<Map<String, Any>>)
-        val services = (
-                didDoc.getOrDefault(
-                    "service", emptyList<Map<String, Any>>()
-                ) as List<Map<String, Any>>)
+        val authentications = getDidDocAuthentications(didDoc)
+        val keyAgreements = getDidDocKeyAgreements(didDoc)
+        val services = getDidDocServices(didDoc)
 
         return Optional.ofNullable(
             DIDDoc(

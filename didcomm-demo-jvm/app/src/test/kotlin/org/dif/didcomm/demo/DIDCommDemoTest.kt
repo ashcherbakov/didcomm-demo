@@ -3,16 +3,87 @@
  */
 package org.dif.didcomm.demo
 
+import org.dif.didcomm.demo.core.fromJsonToMap
+import org.dif.didcomm.demo.core.getDidDocAuthentications
+import org.dif.didcomm.demo.core.getDidDocKeyAgreements
+import org.dif.didcomm.demo.core.getDidDocServices
+import org.dif.didcomm.demo.secrets.SecretResolverDemo
+import org.dif.peerdid.core.DIDDocVerMaterialFormat
 import org.dif.peerdid.isPeerDID
+import org.dif.peerdid.resolvePeerDID
+import org.junit.Rule
+import org.junit.rules.TemporaryFolder
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+
 
 class DIDCommDemoTest {
 
+    @Rule
+    @JvmField
+    val secretsFolder = TemporaryFolder()
+
+    private fun getDemo(): DIDCommDemo {
+        val secretsFile = secretsFolder.newFile("secrets.json")
+        return DIDCommDemo(SecretResolverDemo(secretsFile.absolutePath))
+    }
+
+    private fun checkExpectedDIDDoc(
+        peerDID: String,
+        authKeysCount: Int, agreemKeysCount: Int
+    ) {
+        val didDocJson = resolvePeerDID(peerDID)
+        val didDoc = fromJsonToMap(didDocJson)
+        val authentications = getDidDocAuthentications(didDoc)
+        val keyAgreements = getDidDocKeyAgreements(didDoc)
+        val services = getDidDocServices(didDoc)
+        assertEquals(authKeysCount, authentications.size)
+        assertEquals(agreemKeysCount, keyAgreements.size)
+
+    }
+
     @Test
-    fun testCreatePeerDid() {
-        val demo = DIDCommDemo()
+    fun testCreatePeerDidDefault() {
+        val demo = getDemo()
         val peerDID = demo.createPeerDID()
         assertTrue(isPeerDID(peerDID))
+        assertTrue(peerDID.startsWith("did:peer:2"))
+        assertEquals(
+            2, demo.secretsResolver.getKids().size
+        )
+        demo.secretsResolver.getKids().forEach {
+            assertTrue(it.startsWith(peerDID))
+        }
+        checkExpectedDIDDoc(peerDID, 1, 1)
+    }
+
+    @Test
+    fun testCreatePeerDidNumalgo0() {
+        val demo = getDemo()
+        val peerDID = demo.createPeerDID(authKeysCount = 1, agreementKeysCount = 0)
+        assertTrue(isPeerDID(peerDID))
+        assertTrue(peerDID.startsWith("did:peer:0"))
+        assertEquals(
+            1, demo.secretsResolver.getKids().size
+        )
+        demo.secretsResolver.getKids().forEach {
+            assertTrue(it.startsWith(peerDID))
+        }
+        checkExpectedDIDDoc(peerDID, 1, 0)
+    }
+
+    @Test
+    fun testResolvePeerDID() {
+        val did = "did:peer:0z6MkqRYqQiSgvZQdnBytw86Qbs2ZWUkGv22od935YF4s8M7V"
+        val didDocJson = DIDCommDemo.resolvePeerDID(did, format = DIDDocVerMaterialFormat.JWK)
+        val didDoc = fromJsonToMap(didDocJson)
+        assertTrue("authentications" in didDoc)
+        assertEquals(did, didDoc["id"])
+    }
+
+    @Test
+    fun testPackUnpackAuthcrypt() {
+
     }
 }

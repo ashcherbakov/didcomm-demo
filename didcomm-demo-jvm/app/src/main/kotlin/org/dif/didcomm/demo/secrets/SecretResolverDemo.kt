@@ -1,8 +1,8 @@
 package org.dif.didcomm.demo.secrets
 
-import com.google.gson.GsonBuilder
-import com.google.gson.reflect.TypeToken
+import org.dif.didcomm.demo.core.fromJsonToList
 import org.dif.didcomm.demo.core.jwkToSecret
+import org.dif.didcomm.demo.core.secretToJwk
 import org.dif.didcomm.demo.core.toJson
 import org.dif.secret.Secret
 import java.io.File
@@ -21,14 +21,16 @@ class SecretResolverDemo(private val filePath: String = "secrets.json") : Secret
             save()
         } else {
             val secretsJson = File(filePath).readText()
-            val secretList: List<Map<String, Any>> =
-                GsonBuilder().create().fromJson(secretsJson, object : TypeToken<List<Map<String, Any>>>() {}.type)
-            secrets = secretList.map { jwkToSecret(it) }.associate { it.kid to it }.toMutableMap()
+            secrets = if (secretsJson.isNotEmpty()) {
+                fromJsonToList(secretsJson).map { jwkToSecret(it) }.associate { it.kid to it }.toMutableMap()
+            } else {
+                mutableMapOf()
+            }
         }
     }
 
     private fun save() {
-        val secretJson = toJson(secrets.values)
+        val secretJson = toJson(secrets.values.map { secretToJwk(it) })
         File(filePath).writeText(secretJson)
     }
 
