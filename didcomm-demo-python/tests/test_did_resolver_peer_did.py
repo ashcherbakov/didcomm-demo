@@ -4,7 +4,7 @@ import pytest
 from didcomm.common.types import VerificationMethodType, VerificationMaterial, VerificationMaterialFormat
 from didcomm.did_doc.did_doc import VerificationMethod, DIDCommService
 
-from didcomm_demo.did_doc.did_resolver_peer_did import DIDResolverPeerDID
+from didcomm_demo.did_resolver_peer_did import DIDResolverPeerDID
 
 
 @pytest.fixture()

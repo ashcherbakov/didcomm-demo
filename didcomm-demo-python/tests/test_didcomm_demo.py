@@ -1,12 +1,14 @@
+import asyncio
 import json
 
 import pytest
 from didcomm.pack_encrypted import PackEncryptedConfig
+from didcomm.secrets.secrets_resolver_demo import SecretsResolverDemo
 from peerdid.peer_did import is_peer_did
-from peerdid.types import DIDDocVerMaterialFormat
+from peerdid.types import VerificationMaterialFormatPeerDID
 
 from didcomm_demo.didcomm_demo import DIDCommDemo
-from didcomm_demo.secrets.secrets_resolver_demo import SecretsResolverDemo
+from tests.common import get_secret_resolver_kids
 
 
 @pytest.fixture()
@@ -22,7 +24,7 @@ def demo(secrets_resolver):
 
 def check_expected_did_doc(did, auth_keys_count, agreement_keys_count, service_endpoint=None,
                            service_routing_keys=None):
-    did_doc = json.loads(DIDCommDemo.resolve_peer_did(did, format=DIDDocVerMaterialFormat.JWK))
+    did_doc = json.loads(DIDCommDemo.resolve_peer_did(did, format=VerificationMaterialFormatPeerDID.JWK))
     assert len(did_doc.get("authentication", [])) == auth_keys_count
     assert len(did_doc.get("keyAgreement", [])) == agreement_keys_count
     if service_endpoint is None:
@@ -38,8 +40,8 @@ def test_create_peer_did_numalg_0_one_auth_key(demo):
     did = demo.create_peer_did(auth_keys_count=1, agreement_keys_count=0)
     assert is_peer_did(did)
     assert did.startswith("did:peer:0")
-    assert len(demo.secrets_resolver.get_kids()) == 1
-    assert demo.secrets_resolver.get_kids()[0].startswith(did)
+    assert len(get_secret_resolver_kids(demo.secrets_resolver)) == 1
+    assert get_secret_resolver_kids(demo.secrets_resolver)[0].startswith(did)
     check_expected_did_doc(did, auth_keys_count=1, agreement_keys_count=0, service_endpoint=None)
 
 
@@ -56,21 +58,22 @@ def test_create_peer_did_numalg_2_no_service(demo, auth_keys_count, agreement_ke
     did = demo.create_peer_did(auth_keys_count=auth_keys_count, agreement_keys_count=agreement_keys_count)
     assert is_peer_did(did)
     assert did.startswith("did:peer:2")
-    assert len(demo.secrets_resolver.get_kids()) == auth_keys_count + agreement_keys_count
-    for kid in demo.secrets_resolver.get_kids():
+    assert len(get_secret_resolver_kids(demo.secrets_resolver)) == auth_keys_count + agreement_keys_count
+    for kid in get_secret_resolver_kids(demo.secrets_resolver):
         assert kid.startswith(did)
     check_expected_did_doc(did,
                            auth_keys_count=auth_keys_count, agreement_keys_count=agreement_keys_count,
                            service_endpoint=None)
 
 
+@pytest.mark.asyncio
 def test_create_peer_did_numalg_2_with_service_endpoint_no_routing(demo):
     endpoint = "https://my-endpoint"
     did = demo.create_peer_did(auth_keys_count=1, agreement_keys_count=1, service_endpoint=endpoint)
     assert is_peer_did(did)
     assert did.startswith("did:peer:2")
-    assert len(demo.secrets_resolver.get_kids()) == 2
-    for kid in demo.secrets_resolver.get_kids():
+    assert len(get_secret_resolver_kids(demo.secrets_resolver)) == 2
+    for kid in get_secret_resolver_kids(demo.secrets_resolver):
         assert kid.startswith(did)
     check_expected_did_doc(did,
                            auth_keys_count=1, agreement_keys_count=1,
@@ -85,8 +88,8 @@ def test_create_peer_did_numalg_2_with_service_endpoint_and_routing(demo):
                                service_routing_keys=routing_keys)
     assert is_peer_did(did)
     assert did.startswith("did:peer:2")
-    assert len(demo.secrets_resolver.get_kids()) == 2
-    for kid in demo.secrets_resolver.get_kids():
+    assert len(get_secret_resolver_kids(demo.secrets_resolver)) == 2
+    for kid in get_secret_resolver_kids(demo.secrets_resolver):
         assert kid.startswith(did)
     check_expected_did_doc(did,
                            auth_keys_count=1, agreement_keys_count=1,
@@ -95,7 +98,7 @@ def test_create_peer_did_numalg_2_with_service_endpoint_and_routing(demo):
 
 def test_resolve_peer_did():
     did = "did:peer:0z6MkqRYqQiSgvZQdnBytw86Qbs2ZWUkGv22od935YF4s8M7V"
-    did_doc_json = DIDCommDemo.resolve_peer_did(did, format=DIDDocVerMaterialFormat.JWK)
+    did_doc_json = DIDCommDemo.resolve_peer_did(did, format=VerificationMaterialFormatPeerDID.JWK)
     did_doc = json.loads(did_doc_json)
     assert "authentication" in did_doc
     assert did_doc["id"] == did

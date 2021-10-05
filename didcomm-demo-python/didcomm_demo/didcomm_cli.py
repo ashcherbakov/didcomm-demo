@@ -1,9 +1,11 @@
 import click
+from didcomm.errors import DIDCommError
 from didcomm.pack_encrypted import PackEncryptedConfig
-from peerdid.types import DIDDocVerMaterialFormat
+from didcomm.secrets.secrets_resolver_demo import SecretsResolverDemo
+from peerdid.errors import MalformedPeerDIDError
+from peerdid.types import VerificationMaterialFormatPeerDID
 
 from didcomm_demo.didcomm_demo import DIDCommDemo
-from didcomm_demo.secrets.secrets_resolver_demo import SecretsResolverDemo
 
 secrets_resolver = SecretsResolverDemo()
 
@@ -34,7 +36,7 @@ def create_peer_did(auth_keys_count, agreement_keys_count, service_endpoint, ser
             service_routing_keys=service_routing_keys
         )
         click.echo(f"{did}")
-    except Exception as e:
+    except (ValueError, TypeError) as e:
         click.echo(f"{e}")
     click.echo()
 
@@ -46,11 +48,11 @@ def create_peer_did(auth_keys_count, agreement_keys_count, service_endpoint, ser
               help='DID Doc format (JWK or Multibase)')
 def resolve_peer_did(did, format):
     click.echo()
-    format = DIDDocVerMaterialFormat.JWK if format == "jwk" else DIDDocVerMaterialFormat.MULTIBASE
+    format = VerificationMaterialFormatPeerDID.JWK if format == "jwk" else VerificationMaterialFormatPeerDID.MULTIBASE
     try:
         did_doc_json = DIDCommDemo.resolve_peer_did(did, format)
         click.echo(f"{did_doc_json}")
-    except Exception as e:
+    except MalformedPeerDIDError as e:
         click.echo(f"{e}")
     click.echo()
 
@@ -75,7 +77,7 @@ def pack(msg, to, frm, sign_from, protect_sender_id):
             config=PackEncryptedConfig(protect_sender_id=protect_sender_id)
         )
         click.echo(f"{res.packed_msg}")
-    except Exception as e:
+    except DIDCommError as e:
         click.echo(f"{e}")
     click.echo()
 
@@ -92,7 +94,7 @@ def unpack(msg):
             click.echo(f"authcrypted {initial_msg} from {frm} to {to}")
         else:
             click.echo(f"anoncrypted {initial_msg} to {to}")
-    except Exception as e:
+    except DIDCommError as e:
         click.echo(f"{e}")
     click.echo()
 

@@ -2,11 +2,12 @@ import json
 
 import pytest
 from click.testing import CliRunner
+from didcomm.secrets.secrets_resolver_demo import SecretsResolverDemo
 from peerdid.peer_did import is_peer_did
 
 from didcomm_demo.didcomm_cli import set_secrets_resolver, cli
 from didcomm_demo.didcomm_demo import DIDCommDemo
-from didcomm_demo.secrets.secrets_resolver_demo import SecretsResolverDemo
+from tests.common import get_secret_resolver_kids
 
 
 @pytest.fixture()
@@ -24,8 +25,8 @@ def test_create_peer_did_numalg_0(secrets_resolver):
     peer_did = result.output.strip()
     assert is_peer_did(peer_did)
     assert peer_did.startswith("did:peer:0")
-    assert len(secrets_resolver.get_kids()) == 1
-    assert secrets_resolver.get_kids()[0].startswith(peer_did)
+    assert len(get_secret_resolver_kids(secrets_resolver)) == 1
+    assert get_secret_resolver_kids(secrets_resolver)[0].startswith(peer_did)
 
 
 @pytest.mark.parametrize(
@@ -45,8 +46,8 @@ def test_create_peer_did_numalg_2_no_service(secrets_resolver, auth_keys_count, 
     peer_did = result.output.strip()
     assert is_peer_did(peer_did)
     assert peer_did.startswith("did:peer:2")
-    assert len(secrets_resolver.get_kids()) == auth_keys_count + agreement_keys_count
-    for kid in secrets_resolver.get_kids():
+    assert len(get_secret_resolver_kids(secrets_resolver)) == auth_keys_count + agreement_keys_count
+    for kid in get_secret_resolver_kids(secrets_resolver):
         assert kid.startswith(peer_did)
 
 
@@ -60,8 +61,8 @@ def test_create_peer_did_numalg_2_with_service_endpoint_no_routing(secrets_resol
     peer_did = result.output.strip()
     assert is_peer_did(peer_did)
     assert peer_did.startswith("did:peer:2")
-    assert len(secrets_resolver.get_kids()) == 2
-    for kid in secrets_resolver.get_kids():
+    assert len(get_secret_resolver_kids(secrets_resolver)) == 2
+    for kid in get_secret_resolver_kids(secrets_resolver):
         assert kid.startswith(peer_did)
 
 
@@ -93,7 +94,7 @@ def did_to(secrets_resolver):
 def test_pack_unpack_authcrypt(input_msg, secrets_resolver, did_frm, did_to):
     runner = CliRunner()
     result = runner.invoke(cli, ['pack', input_msg,
-                                 f'--frm={did_frm}',
+                                 f'--from={did_frm}',
                                  f'--to={did_to}'])
     assert result.exit_code == 0
     packed_msg = result.output.strip()
