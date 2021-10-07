@@ -69,7 +69,7 @@ class DIDCommDemo:
                 ).to_dict()
             )
 
-        # 3. call peer DID lib
+        # 4. call peer DID lib
         # if we have just one key (auth), then use numalg0 algorithm
         # otherwise use numalg2 algorithm
         if len(auth_keys_peer_did) == 1 and not agreem_keys_peer_did and not service:
@@ -81,7 +81,7 @@ class DIDCommDemo:
                 service=service,
             )
 
-        # 4. set KIDs as in DID DOC for secrets and store the secret in the secrets resolver
+        # 5. set KIDs as in DID DOC for secrets and store the secret in the secrets resolver
         did_doc = DIDDocPeerDID.from_json(peer_did.resolve_peer_did(did))
         for auth_key, kid in zip(auth_keys, did_doc.auth_kids):
             private_key = auth_key[0]
