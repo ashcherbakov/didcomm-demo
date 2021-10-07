@@ -5,7 +5,9 @@ if __name__ == '__main__':
     demo = DIDCommDemo()
 
     # 1. Bob creates a pairwise peer DID for the connection
-    bob_peer_did = demo.create_peer_did()
+    bob_peer_did = demo.create_peer_did(auth_keys_count=1, agreement_keys_count=1,
+                                        service_endpoint="http://service",
+                                        service_routing_keys=["key1", "key2"])
     print(f"Bob generates a new pairwise peer DID for communication with Alice: `{bob_peer_did}`.")
     print("\n")
 

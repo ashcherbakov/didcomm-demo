@@ -21,11 +21,11 @@ def cli():
 
 
 @cli.command()
-@click.option('--auth_keys_count', default=1, help='Number of authentication keys')
-@click.option('--agreement_keys_count', default=1, help='Number of agreement keys')
-@click.option('--service_endpoint', default=None, help='Optional service endpoint')
-@click.option('--service_routing_keys', default=[], help='Optional service routing keys')
-def create_peer_did(auth_keys_count, agreement_keys_count, service_endpoint, service_routing_keys):
+@click.option('--auth-keys-count', default=1, help='Number of authentication keys')
+@click.option('--agreement-keys-count', default=1, help='Number of agreement keys')
+@click.option('--service-endpoint', default=None, help='Optional service endpoint')
+@click.option('--service-routing-key', default=[], multiple=True, help='Optional service routing keys')
+def create_peer_did(auth_keys_count, agreement_keys_count, service_endpoint, service_routing_key):
     click.echo()
     demo = DIDCommDemo(secrets_resolver)
     try:
@@ -33,7 +33,7 @@ def create_peer_did(auth_keys_count, agreement_keys_count, service_endpoint, ser
             auth_keys_count=auth_keys_count,
             agreement_keys_count=agreement_keys_count,
             service_endpoint=service_endpoint,
-            service_routing_keys=service_routing_keys
+            service_routing_keys=service_routing_key
         )
         click.echo(f"{did}")
     except (ValueError, TypeError) as e:

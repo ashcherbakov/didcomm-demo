@@ -7,7 +7,7 @@ from peerdid.peer_did import is_peer_did
 
 from didcomm_demo.didcomm_cli import set_secrets_resolver, cli
 from didcomm_demo.didcomm_demo import DIDCommDemo
-from tests.common import get_secret_resolver_kids
+from tests.common import get_secret_resolver_kids, check_expected_did_doc
 
 
 @pytest.fixture()
@@ -20,13 +20,14 @@ def secrets_resolver(tmp_path):
 
 def test_create_peer_did_numalg_0(secrets_resolver):
     runner = CliRunner()
-    result = runner.invoke(cli, ['create-peer-did', '--auth_keys_count=1', '--agreement_keys_count=0'])
+    result = runner.invoke(cli, ['create-peer-did', '--auth-keys-count=1', '--agreement-keys-count=0'])
     assert result.exit_code == 0
     peer_did = result.output.strip()
     assert is_peer_did(peer_did)
     assert peer_did.startswith("did:peer:0")
     assert len(get_secret_resolver_kids(secrets_resolver)) == 1
     assert get_secret_resolver_kids(secrets_resolver)[0].startswith(peer_did)
+    check_expected_did_doc(peer_did, auth_keys_count=1, agreement_keys_count=0, service_endpoint=None)
 
 
 @pytest.mark.parametrize(
@@ -40,8 +41,8 @@ def test_create_peer_did_numalg_0(secrets_resolver):
 )
 def test_create_peer_did_numalg_2_no_service(secrets_resolver, auth_keys_count, agreement_keys_count):
     runner = CliRunner()
-    result = runner.invoke(cli, ['create-peer-did', f'--auth_keys_count={auth_keys_count}',
-                                 f'--agreement_keys_count={agreement_keys_count}'])
+    result = runner.invoke(cli, ['create-peer-did', f'--auth-keys-count={auth_keys_count}',
+                                 f'--agreement-keys-count={agreement_keys_count}'])
     assert result.exit_code == 0
     peer_did = result.output.strip()
     assert is_peer_did(peer_did)
@@ -49,14 +50,16 @@ def test_create_peer_did_numalg_2_no_service(secrets_resolver, auth_keys_count, 
     assert len(get_secret_resolver_kids(secrets_resolver)) == auth_keys_count + agreement_keys_count
     for kid in get_secret_resolver_kids(secrets_resolver):
         assert kid.startswith(peer_did)
+    check_expected_did_doc(peer_did, auth_keys_count=auth_keys_count, agreement_keys_count=agreement_keys_count,
+                           service_endpoint=None)
 
 
 def test_create_peer_did_numalg_2_with_service_endpoint_no_routing(secrets_resolver):
     runner = CliRunner()
     result = runner.invoke(cli, ['create-peer-did',
-                                 '--auth_keys_count=1',
-                                 '--agreement_keys_count=1',
-                                 '--service_endpoint="https://my-endpoint'])
+                                 '--auth-keys-count=1',
+                                 '--agreement-keys-count=1',
+                                 '--service-endpoint=https://my-endpoint'])
     assert result.exit_code == 0
     peer_did = result.output.strip()
     assert is_peer_did(peer_did)
@@ -64,6 +67,27 @@ def test_create_peer_did_numalg_2_with_service_endpoint_no_routing(secrets_resol
     assert len(get_secret_resolver_kids(secrets_resolver)) == 2
     for kid in get_secret_resolver_kids(secrets_resolver):
         assert kid.startswith(peer_did)
+    check_expected_did_doc(peer_did, auth_keys_count=1, agreement_keys_count=1, service_endpoint="https://my-endpoint")
+
+
+def test_create_peer_did_numalg_2_with_service_endpoint_and_routing(secrets_resolver):
+    runner = CliRunner()
+    result = runner.invoke(cli, ['create-peer-did',
+                                 '--auth-keys-count=1',
+                                 '--agreement-keys-count=1',
+                                 '--service-endpoint=https://my-endpoint',
+                                 '--service-routing-key=key1',
+                                 '--service-routing-key=key2'
+                                 ], )
+    assert result.exit_code == 0
+    peer_did = result.output.strip()
+    assert is_peer_did(peer_did)
+    assert peer_did.startswith("did:peer:2")
+    assert len(get_secret_resolver_kids(secrets_resolver)) == 2
+    for kid in get_secret_resolver_kids(secrets_resolver):
+        assert kid.startswith(peer_did)
+    check_expected_did_doc(peer_did, auth_keys_count=1, agreement_keys_count=1, service_endpoint="https://my-endpoint",
+                           service_routing_keys=["key1", "key2"])
 
 
 def test_resolve_peer_did(secrets_resolver):

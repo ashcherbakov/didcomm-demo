@@ -1,4 +1,3 @@
-import asyncio
 import json
 
 import pytest
@@ -8,7 +7,7 @@ from peerdid.peer_did import is_peer_did
 from peerdid.types import VerificationMaterialFormatPeerDID
 
 from didcomm_demo.didcomm_demo import DIDCommDemo
-from tests.common import get_secret_resolver_kids
+from tests.common import get_secret_resolver_kids, check_expected_did_doc
 
 
 @pytest.fixture()
@@ -20,20 +19,6 @@ def secrets_resolver(tmp_path):
 @pytest.fixture()
 def demo(secrets_resolver):
     return DIDCommDemo(secrets_resolver)
-
-
-def check_expected_did_doc(did, auth_keys_count, agreement_keys_count, service_endpoint=None,
-                           service_routing_keys=None):
-    did_doc = json.loads(DIDCommDemo.resolve_peer_did(did, format=VerificationMaterialFormatPeerDID.JWK))
-    assert len(did_doc.get("authentication", [])) == auth_keys_count
-    assert len(did_doc.get("keyAgreement", [])) == agreement_keys_count
-    if service_endpoint is None:
-        assert "service" not in did_doc
-    else:
-        assert did_doc.get("service")[0]["serviceEndpoint"] == service_endpoint
-        assert did_doc.get("service")[0]["accept"] == ["didcomm/v2"]
-        if service_routing_keys is not None:
-            assert did_doc.get("service")[0]["routingKeys"] == service_routing_keys
 
 
 def test_create_peer_did_numalg_0_one_auth_key(demo):
@@ -106,12 +91,16 @@ def test_resolve_peer_did():
 
 @pytest.fixture()
 def did_frm(demo):
-    return demo.create_peer_did(auth_keys_count=2, agreement_keys_count=2)
+    return demo.create_peer_did(auth_keys_count=2, agreement_keys_count=2,
+                                service_endpoint="http://endpoint-from",
+                                service_routing_keys=["key1", "key2"])
 
 
 @pytest.fixture()
 def did_to(demo):
-    return demo.create_peer_did(auth_keys_count=2, agreement_keys_count=2)
+    return demo.create_peer_did(auth_keys_count=2, agreement_keys_count=2,
+                                service_endpoint="http://endpoint-to",
+                                service_routing_keys=["key3", "key4"])
 
 
 MESSAGES = ["hello", "111", '{"aaa": "bbb"}']
@@ -184,7 +173,7 @@ def test_pack_authcrypt_not_hidden_sender(input_msg, demo, did_frm, did_to):
     unpacked_msg, frm, to, unpack_res = demo.unpack(packed_res.packed_msg)
     assert input_msg == unpacked_msg
     assert frm == did_frm
-    assert to ==did_to
+    assert to == did_to
     assert unpack_res.metadata.authenticated is True
     assert unpack_res.metadata.encrypted is True
     assert unpack_res.metadata.anonymous_sender is False
