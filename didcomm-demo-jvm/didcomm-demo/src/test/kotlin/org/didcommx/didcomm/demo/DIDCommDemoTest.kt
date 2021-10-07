@@ -6,6 +6,7 @@ package org.didcommx.didcomm.demo
 import org.didcommx.didcomm.demo.DIDCommDemoHelper.Companion.resolvePeerDID
 import org.didcommx.didcomm.secret.SecretResolverDemo
 import org.didcommx.didcomm.utils.fromJsonToMap
+import org.didcommx.peerdid.DIDCommServicePeerDID
 import org.didcommx.peerdid.DIDDocPeerDID
 import org.didcommx.peerdid.VerificationMaterialFormatPeerDID
 import org.didcommx.peerdid.isPeerDID
@@ -33,13 +34,20 @@ class DIDCommDemoTest {
         peerDID: String,
         authKeysCount: Int,
         agreemKeysCount: Int,
-        service_endpoint: String? = null,
-        service_routing_keys: List<String> = emptyList()
+        serviceEndpoint: String? = null,
+        serviceRoutingKeys: List<String>? = null
     ) {
         val didDocJson = resolvePeerDID(peerDID, VerificationMaterialFormatPeerDID.JWK)
         val didDoc = DIDDocPeerDID.fromJson(didDocJson)
         assertEquals(authKeysCount, didDoc.authentication.size)
         assertEquals(agreemKeysCount, didDoc.keyAgreement.size)
+        serviceEndpoint?.run {
+            assertEquals(1, didDoc.service!!.size)
+            val service = didDoc.service!![0]
+            assertTrue(service is DIDCommServicePeerDID)
+            assertEquals(serviceEndpoint, service.serviceEndpoint)
+            assertEquals(serviceRoutingKeys, service.routingKeys)
+        }
     }
 
     @Test
@@ -69,6 +77,55 @@ class DIDCommDemoTest {
         }
         checkExpectedDIDDoc(peerDID, 1, 0)
     }
+
+    @Test
+    fun testCreatePeerDidNumalgo2NoService() {
+        val peerDID = demo.createPeerDID(authKeysCount = 1, agreementKeysCount = 1)
+        assertTrue(isPeerDID(peerDID))
+        assertTrue(peerDID.startsWith("did:peer:2"))
+        assertEquals(
+            2, demo.secretsResolver.getKids().size
+        )
+        demo.secretsResolver.getKids().forEach {
+            assertTrue(it.startsWith(peerDID))
+        }
+        checkExpectedDIDDoc(peerDID, 1, 1)
+    }
+
+    @Test
+    fun testCreatePeerDidNumalgo2WithService() {
+        val endpoint = "https://my-endpoint"
+        val peerDID = demo.createPeerDID(authKeysCount = 1, agreementKeysCount = 1, serviceEndpoint = endpoint)
+        assertTrue(isPeerDID(peerDID))
+        assertTrue(peerDID.startsWith("did:peer:2"))
+        assertEquals(
+            2, demo.secretsResolver.getKids().size
+        )
+        demo.secretsResolver.getKids().forEach {
+            assertTrue(it.startsWith(peerDID))
+        }
+        checkExpectedDIDDoc(peerDID, 1, 1, endpoint)
+    }
+
+    @Test
+    fun testCreatePeerDidNumalgo2WithServiceAndKeys() {
+        val endpoint = "https://my-endpoint"
+        val routingKeys = listOf("key1", "key2")
+        val peerDID = demo.createPeerDID(
+            authKeysCount = 1, agreementKeysCount = 1,
+            serviceEndpoint = endpoint, serviceRoutingKeys = routingKeys
+        )
+        assertTrue(isPeerDID(peerDID))
+        assertTrue(peerDID.startsWith("did:peer:2"))
+        assertEquals(
+            2, demo.secretsResolver.getKids().size
+        )
+        demo.secretsResolver.getKids().forEach {
+            assertTrue(it.startsWith(peerDID))
+        }
+        checkExpectedDIDDoc(peerDID, 1, 1, endpoint, routingKeys)
+    }
+
 
     @Test
     fun testResolvePeerDID() {

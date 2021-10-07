@@ -1,7 +1,6 @@
 package org.didcommx.didcomm.demo
 
 import org.didcommx.didcomm.DIDComm
-import org.didcommx.didcomm.exceptions.MalformedMessageException
 import org.didcommx.didcomm.message.Message
 import org.didcommx.didcomm.model.PackEncryptedParams
 import org.didcommx.didcomm.model.PackEncryptedResult
@@ -32,7 +31,7 @@ class DIDCommDemoHelper(secretsResolver: SecretResolverEditable? = null) {
         authKeysCount: Int = 1,
         agreementKeysCount: Int = 1,
         serviceEndpoint: String? = null,
-        serviceRoutingKeys: List<String> = emptyList()
+        serviceRoutingKeys: List<String>? = null
     ): String {
         // 1. generate keys in JWK format
         val x25519keyPairs = (1..agreementKeysCount).map { generateX25519Keys() }
@@ -120,18 +119,13 @@ class DIDCommDemoHelper(secretsResolver: SecretResolverEditable? = null) {
 
     fun unpack(packedMsg: String): UnpackResult {
         val didComm = DIDComm(DIDDocResolverPeerDID(), secretsResolver)
-        try {
-            val res = didComm.unpack(UnpackParams.Builder(packedMsg).build())
-            val msg = res.message.body["msg"].toString()
-            val to = res.metadata.encryptedTo?.let { divideDIDFragment(it.first()).first() } ?: ""
-            val from = res.metadata.encryptedFrom?.let { divideDIDFragment(it).first() }
-            return UnpackResult(
-                message = msg,
-                from = from, to = to, res = res
-            )
-        } catch (e: MalformedMessageException) {
-            println(packedMsg)
-            throw e
-        }
+        val res = didComm.unpack(UnpackParams.Builder(packedMsg).build())
+        val msg = res.message.body["msg"].toString()
+        val to = res.metadata.encryptedTo?.let { divideDIDFragment(it.first()).first() } ?: ""
+        val from = res.metadata.encryptedFrom?.let { divideDIDFragment(it).first() }
+        return UnpackResult(
+            message = msg,
+            from = from, to = to, res = res
+        )
     }
 }

@@ -23,15 +23,21 @@ class PeerDIDCreatorCommand : Subcommand("create-peer-did", "Creates a new Peer 
         fullName = "agreement-keys-count"
     ).default(1)
     val serviceEndpoint by option(
-        ArgType.Int,
-        description = "Number of agreement keys",
+        ArgType.String,
+        description = "Service endpoint",
         fullName = "service-endpoint"
-    ).default(1)
+    )
+    val serviceRoutingKeys by option(
+        ArgType.String,
+        description = "Service routing keys",
+        fullName = "service-routing-keys"
+    ).multiple()
 
     override fun execute() {
         val res = try {
             demo.createPeerDID(
-                authKeysCount = authKeysCount, agreementKeysCount = agreementKeysCount
+                authKeysCount = authKeysCount, agreementKeysCount = agreementKeysCount,
+                serviceEndpoint = serviceEndpoint, serviceRoutingKeys = serviceRoutingKeys
             )
         } catch (e: IllegalArgumentException) {
             e.localizedMessage
